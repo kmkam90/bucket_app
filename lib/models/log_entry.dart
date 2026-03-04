@@ -1,3 +1,4 @@
+import 'enums.dart';
 
 class LogEntry {
   final DateTime date;

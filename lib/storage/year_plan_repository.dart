@@ -22,8 +22,8 @@ class YearPlanRepository {
 }
 
 /// 기존 bucket_lists 구조를 새 YearPlan 구조로 변환 (마이그레이션)
-/// 기존 bucket_lists: `List<BucketList>` (title, items)
-/// 새 구조: `List<YearPlan>` (year, goals[GoalType, logs[LogEntry]])
+/// 기존 bucket_lists: List<BucketList> (title, items)
+/// 새 구조: List<YearPlan> (year, goals[GoalType, logs[LogEntry]])
 Future<List<YearPlan>> migrateFromOldBucketLists(List<dynamic> oldBucketLists) async {
   // 예시: oldBucketLists = [{"title": "2026년 버킷리스트", "items": [...]}, ...]
   List<YearPlan> yearPlans = [];

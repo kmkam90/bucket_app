@@ -1,5 +1,6 @@
 import 'enums.dart';
 
+import 'enums.dart';
 
 class GoalTarget {
   final GoalTargetMode mode;

@@ -29,7 +29,7 @@ class GoalStorage {
         final map = jsonDecode(entry) as Map<String, dynamic>;
         decoded.add(BucketList.fromMap(map));
       } catch (e) {
-        continue;
+        print('Error decoding bucket list: $e');
       }
     }
     return decoded;

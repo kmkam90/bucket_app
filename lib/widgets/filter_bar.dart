@@ -11,14 +11,14 @@ class FilterBar extends StatelessWidget {
   final ValueChanged<GoalCategory?> onCategoryChanged;
 
   const FilterBar({
-    super.key,
+    Key? key,
     required this.year,
     required this.goals,
     required this.selectedGoal,
     required this.selectedCategory,
     required this.onGoalChanged,
     required this.onCategoryChanged,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

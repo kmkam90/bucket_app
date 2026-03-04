@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class OverviewCalendarScreen extends StatelessWidget {
   final int year;
-  const OverviewCalendarScreen({super.key, required this.year});
+  const OverviewCalendarScreen({Key? key, required this.year}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

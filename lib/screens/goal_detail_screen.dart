@@ -4,7 +4,7 @@ import '../models/goal.dart';
 
 class GoalDetailScreen extends StatelessWidget {
   final Goal goal;
-  const GoalDetailScreen({super.key, required this.goal});
+  const GoalDetailScreen({Key? key, required this.goal}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

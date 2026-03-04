@@ -3,6 +3,52 @@ import 'enums.dart';
 import 'goal_target.dart';
 import 'log_entry.dart';
 
+// ─── BucketList / BucketItem ─────────────────────────────────────────────────
+
+class BucketItem {
+  String text;
+  bool isDone;
+  DateTime? completedAt;
+
+  BucketItem({required this.text, this.isDone = false, this.completedAt});
+
+  Map<String, dynamic> toMap() => {
+    'text': text,
+    'isDone': isDone,
+    'completedAt': completedAt?.toIso8601String(),
+  };
+
+  factory BucketItem.fromMap(Map<String, dynamic> map) => BucketItem(
+    text: map['text'] as String,
+    isDone: map['isDone'] as bool? ?? false,
+    completedAt: map['completedAt'] != null
+        ? DateTime.tryParse(map['completedAt'] as String)
+        : null,
+  );
+}
+
+class BucketList {
+  String title;
+  List<BucketItem> items;
+
+  BucketList({required this.title, required this.items});
+
+  Map<String, dynamic> toMap() => {
+    'title': title,
+    'items': items.map((item) => item.toMap()).toList(),
+  };
+
+  factory BucketList.fromMap(Map<String, dynamic> map) => BucketList(
+    title: map['title'] as String,
+    items: (map['items'] as List<dynamic>?)
+            ?.map((e) => BucketItem.fromMap(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+  );
+}
+
+// ─── Goal ────────────────────────────────────────────────────────────────────
+
 class Goal {
     Goal copyWith({
       String? id,
@@ -55,49 +101,5 @@ class Goal {
         'category': category?.name,
         'target': target.toJson(),
         'logs': logs.map((l) => l.toJson()).toList(),
-      };
-}
-
-class BucketItem {
-  String text;
-  bool isDone;
-
-  BucketItem({required this.text, this.isDone = false});
-
-  factory BucketItem.fromMap(Map<String, dynamic> map) {
-    return BucketItem(
-      text: map['text'] as String? ?? '',
-      isDone: map['isDone'] as bool? ?? false,
-    );
-  }
-
-  Map<String, dynamic> toMap() => {
-        'text': text,
-        'isDone': isDone,
-      };
-}
-
-class BucketList {
-  String title;
-  List<BucketItem> items;
-
-  BucketList({required this.title, required this.items});
-
-  factory BucketList.fromMap(Map<String, dynamic> map) {
-    final rawItems = map['items'];
-    final items = (rawItems is List)
-        ? rawItems
-            .map((e) => BucketItem.fromMap(Map<String, dynamic>.from(e as Map)))
-            .toList()
-        : <BucketItem>[];
-    return BucketList(
-      title: map['title'] as String? ?? '',
-      items: items,
-    );
-  }
-
-  Map<String, dynamic> toMap() => {
-        'title': title,
-        'items': items.map((item) => item.toMap()).toList(),
       };
 }
