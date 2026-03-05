@@ -1,8 +1,8 @@
 import 'package:intl/intl.dart';
 import '../models/goal.dart';
-import '../models/log_entry.dart';
+import '../models/goal_log.dart';
 import '../models/enums.dart';
-import 'package:flutter/material.dart' show DateUtils;
+import 'date_utils.dart' as app_dates;
 
 double getFrequencyRate(List<DateTime> checkedDates, int timesPerWeek, int year, {int? month}) {
   final dateSet = checkedDates
@@ -48,13 +48,15 @@ List<_Week> _weeksInPeriod(int year, [int? month]) {
     first = DateTime(year, 1, 1);
     last = DateTime(year, 12, 31);
   }
-  first = first.subtract(Duration(days: (first.weekday - 1) % 7));
+  // Align to ISO week start (Monday)
+  var start = app_dates.startOfIsoWeek(first);
   List<_Week> weeks = [];
-  DateTime start = first;
-  while (start.isBefore(last) || start.isAtSameMomentAs(last)) {
-    final end = start.add(const Duration(days: 6));
+  while (!start.isAfter(last)) {
+    // Calendar arithmetic for Sunday (inclusive end)
+    final end = DateTime(start.year, start.month, start.day + 6);
     weeks.add(_Week(start, end.isAfter(last) ? last : end));
-    start = end.add(const Duration(days: 1));
+    // Next Monday via calendar arithmetic
+    start = DateTime(start.year, start.month, start.day + 7);
   }
   return weeks;
 }
@@ -64,43 +66,43 @@ class _Week {
   final DateTime end;
   _Week(this.start, this.end);
 }
-// ...existing code...
 
 class DashboardStatistics {
   static bool isDoneOnDate(Goal goal, DateTime date) {
-    return goal.logs.any((l) => goal.metricType == GoalMetricType.habit && DateUtils.isSameDay(l.date, date) && l.value == 1);
+    return goal.logs.any((l) =>
+        goal.metricType == GoalMetricType.habit &&
+        app_dates.sameDate(l.date, date) &&
+        l.value == 1);
   }
 
   static void toggleHabitOnDate(Goal goal, DateTime date) {
-    final idx = goal.logs.indexWhere((l) => goal.metricType == GoalMetricType.habit && DateUtils.isSameDay(l.date, date));
+    final idx = goal.logs.indexWhere((l) =>
+        goal.metricType == GoalMetricType.habit &&
+        app_dates.sameDate(l.date, date));
     if (idx >= 0) {
       goal.logs.removeAt(idx);
     } else {
-      goal.logs.add(LogEntry(date: date, value: 1));
+      goal.logs.add(GoalLog.habit(
+        id: 'log_${date.millisecondsSinceEpoch}',
+        date: date,
+      ));
     }
   }
 
   static int getStreak(Goal goal, DateTime today) {
-    final logs = goal.logs.where((l) => goal.metricType == GoalMetricType.habit && l.value == 1).toList();
-    if (logs.isEmpty) return 0;
-    logs.sort((a, b) => b.date.compareTo(a.date));
-    int streak = 0;
-    DateTime? prev = today;
-    for (final log in logs) {
-      if (prev == null) {
-        prev = log.date;
-        streak = 1;
-      } else {
-        if (prev.difference(log.date).inDays == 1) {
-          streak++;
-          prev = log.date;
-        } else {
-          break;
-        }
-      }
-    }
-    return streak;
+    return getCurrentStreak(goal);
   }
 
-// ...existing code...
+  /// Current streak: consecutive days ending today or yesterday.
+  /// Delegates to GoalProgress when possible.
+  static int getCurrentStreak(Goal goal) {
+    if (goal.metricType != GoalMetricType.habit) return 0;
+    return goal.progress.currentStreak;
+  }
+
+  /// Best streak ever achieved.
+  static int getBestStreak(Goal goal) {
+    if (goal.metricType != GoalMetricType.habit) return 0;
+    return goal.progress.bestStreak;
+  }
 }

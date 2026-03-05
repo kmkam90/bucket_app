@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/goal.dart';
+import '../utils/date_utils.dart' as app_dates;
 
 class BucketListCalendarScreen extends StatefulWidget {
   final BucketList bucketList;
@@ -11,7 +12,7 @@ class BucketListCalendarScreen extends StatefulWidget {
 }
 
 class _BucketListCalendarScreenState extends State<BucketListCalendarScreen> {
-  late final Map<DateTime, List<BucketItem>> _doneMap;
+  late final Map<int, List<BucketItem>> _doneMap;
   late final List<Color> _goalColors;
 
   @override
@@ -30,21 +31,18 @@ class _BucketListCalendarScreenState extends State<BucketListCalendarScreen> {
       Colors.cyan,
     ];
     _doneMap = {};
-    // 예시: 각 목표가 완료된 날짜가 있다면, 그 날짜에 색상별로 표시
-    // 실제로는 BucketItem에 완료 날짜가 필요하지만, 예시에서는 isDone만 사용
-    // 모든 목표가 오늘 완료된 것으로 가정
-    final today = DateTime.now();
+    final today = app_dates.dateOnly(DateTime.now());
+    final todayKey = app_dates.dateKey(today);
     for (int i = 0; i < widget.bucketList.items.length; i++) {
       final item = widget.bucketList.items[i];
       if (item.isDone) {
-        final date = today;
-        _doneMap.putIfAbsent(date, () => []).add(item);
+        _doneMap.putIfAbsent(todayKey, () => []).add(item);
       }
     }
   }
 
   List<Widget> _buildEventMarkers(DateTime day) {
-    final items = _doneMap[DateTime(day.year, day.month, day.day)] ?? [];
+    final items = _doneMap[app_dates.dateKey(day)] ?? [];
     return List.generate(items.length, (i) {
       final color = _goalColors[i % _goalColors.length];
       return Padding(

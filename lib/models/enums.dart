@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 // 측정 방식 타입
 enum GoalMetricType { habit, count, duration }
 
@@ -5,7 +7,43 @@ enum GoalMetricType { habit, count, duration }
 enum GoalTargetMode { frequency, total }
 
 // 카테고리(선택)
-enum GoalCategory { health, selfDevelopment, travel, etc }
+enum GoalCategory { health, selfDevelopment, travel, finance, hobby, social, etc }
+
+String goalCategoryLabel(GoalCategory cat) {
+  switch (cat) {
+    case GoalCategory.health: return '건강';
+    case GoalCategory.selfDevelopment: return '자기계발';
+    case GoalCategory.travel: return '여행';
+    case GoalCategory.finance: return '재정';
+    case GoalCategory.hobby: return '취미';
+    case GoalCategory.social: return '관계';
+    case GoalCategory.etc: return '기타';
+  }
+}
+
+Color goalCategoryColor(GoalCategory cat) {
+  switch (cat) {
+    case GoalCategory.health: return const Color(0xFF6BCB8B);
+    case GoalCategory.selfDevelopment: return const Color(0xFF7B8CDE);
+    case GoalCategory.travel: return const Color(0xFFE8A87C);
+    case GoalCategory.finance: return const Color(0xFFF7D794);
+    case GoalCategory.hobby: return const Color(0xFFCB8BDE);
+    case GoalCategory.social: return const Color(0xFF8BD4DE);
+    case GoalCategory.etc: return const Color(0xFF9CA3AF);
+  }
+}
+
+IconData goalCategoryIcon(GoalCategory cat) {
+  switch (cat) {
+    case GoalCategory.health: return Icons.favorite_rounded;
+    case GoalCategory.selfDevelopment: return Icons.auto_stories_rounded;
+    case GoalCategory.travel: return Icons.flight_rounded;
+    case GoalCategory.finance: return Icons.savings_rounded;
+    case GoalCategory.hobby: return Icons.palette_rounded;
+    case GoalCategory.social: return Icons.people_rounded;
+    case GoalCategory.etc: return Icons.more_horiz_rounded;
+  }
+}
 
 // 목표 단위
 enum GoalUnit { books, times, minutes, hours, custom }
@@ -39,6 +77,3 @@ GoalUnit goalUnitFromString(String str) {
 			return GoalUnit.custom;
 	}
 }
-
-// duration 목표 모드
-enum DurationMode { daily, weekly }
