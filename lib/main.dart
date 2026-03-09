@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'core/app_error.dart';
+import 'errors/user_error_message.dart';
 import 'state/app_state.dart';
 import 'screens/home_screen.dart';
 import 'screens/year_list_screen.dart';
@@ -209,6 +211,23 @@ class _MainTabScreenState extends State<MainTabScreen> {
   int _index = 0;
   bool _warningsShown = false;
 
+  /// Cooldown: suppress duplicate errors with the same code within this window.
+  static const _errorCooldown = Duration(seconds: 3);
+  AppErrorCode? _lastShownErrorCode;
+  DateTime? _lastShownErrorTime;
+
+  bool _shouldShowError(AppError error) {
+    final now = DateTime.now();
+    if (_lastShownErrorCode == error.code &&
+        _lastShownErrorTime != null &&
+        now.difference(_lastShownErrorTime!) < _errorCooldown) {
+      return false;
+    }
+    _lastShownErrorCode = error.code;
+    _lastShownErrorTime = now;
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -234,21 +253,23 @@ class _MainTabScreenState extends State<MainTabScreen> {
       });
     }
 
-    // Show persist errors as SnackBar (non-blocking)
+    // Show persist errors as SnackBar with cooldown deduplication
     if (state.lastError != null) {
       final error = state.lastError!;
+      final retryable = isRetryable(error.code) && state.canRetry;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         state.clearError();
+        if (!_shouldShowError(error)) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error),
+            content: Text(userMessageFor(error)),
             backgroundColor: const Color(0xFFDC6B6B),
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
-              label: '확인',
+              label: retryable ? '재시도' : '확인',
               textColor: Colors.white,
-              onPressed: () {},
+              onPressed: retryable ? () => state.retryLastOperation() : () {},
             ),
           ),
         );

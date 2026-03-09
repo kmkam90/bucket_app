@@ -63,6 +63,7 @@ class _BucketListDetailScreenState extends State<BucketListDetailScreen> {
   }
 
   Future<void> _save() async {
+    if (!mounted) return;
     await context.read<AppState>().updateBucketList(widget.listIndex, _bucketList);
   }
 

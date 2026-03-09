@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../core/app_error.dart';
 import '../core/result.dart';
 import '../models/goal.dart';
 import '../models/goal_log.dart';
@@ -12,7 +13,13 @@ class AppState extends ChangeNotifier {
   List<YearPlan> _yearPlans = [];
   bool _isLoading = true;
   List<String> _warnings = [];
-  String? _lastError;
+  AppError? _lastError;
+
+  /// Ring buffer of recent errors for debug diagnostics.
+  final ErrorHistory errorHistory = ErrorHistory();
+
+  /// Tracks which persist operation last failed, for retry support.
+  Future<void> Function()? _lastFailedOperation;
 
   /// Serializes persist writes so rapid mutations don't interleave.
   Future<void> _persistQueue = Future.value();
@@ -24,7 +31,7 @@ class AppState extends ChangeNotifier {
   List<YearPlan> get yearPlans => _yearPlans;
   bool get isLoading => _isLoading;
   List<String> get warnings => _warnings;
-  String? get lastError => _lastError;
+  AppError? get lastError => _lastError;
   List<Goal> get allGoals => _yearPlans.expand((yp) => yp.goals).toList();
 
   void clearWarnings() {
@@ -35,6 +42,19 @@ class AppState extends ChangeNotifier {
   void clearError() {
     _lastError = null;
     notifyListeners();
+  }
+
+  /// Whether the last error can be retried.
+  bool get canRetry => _lastFailedOperation != null;
+
+  /// Re-runs the last failed persist operation.
+  Future<void> retryLastOperation() async {
+    final op = _lastFailedOperation;
+    if (op == null) return;
+    _lastFailedOperation = null;
+    _lastError = null;
+    notifyListeners();
+    await op();
   }
 
   // ─── Init ───────────────────────────────────────────────────
@@ -175,13 +195,31 @@ class AppState extends ChangeNotifier {
     return _persistQueue;
   }
 
+  void _setError(
+    AppErrorCode code,
+    String message, {
+    Object? cause,
+    Future<void> Function()? retryOperation,
+  }) {
+    final error = AppError(code: code, message: message, cause: cause);
+    errorHistory.add(error);
+    _lastError = error;
+    _lastFailedOperation = retryOperation;
+    notifyListeners();
+  }
+
   Future<void> _persistBucketLists() => _enqueue(() async {
     final result = await _repo.saveBucketLists(_bucketLists);
     switch (result) {
-      case Err(:final message):
-        _lastError = message;
-        notifyListeners();
+      case Err(:final message, :final error):
+        _setError(
+          message.contains('검증') ? AppErrorCode.writeVerifyFailed : AppErrorCode.writeFailed,
+          message,
+          cause: error,
+          retryOperation: _persistBucketLists,
+        );
       case Ok():
+        _lastFailedOperation = null;
         break;
     }
   });
@@ -189,10 +227,15 @@ class AppState extends ChangeNotifier {
   Future<void> _persistYearPlans() => _enqueue(() async {
     final result = await _repo.saveYearPlans(_yearPlans);
     switch (result) {
-      case Err(:final message):
-        _lastError = message;
-        notifyListeners();
+      case Err(:final message, :final error):
+        _setError(
+          message.contains('검증') ? AppErrorCode.writeVerifyFailed : AppErrorCode.writeFailed,
+          message,
+          cause: error,
+          retryOperation: _persistYearPlans,
+        );
       case Ok():
+        _lastFailedOperation = null;
         break;
     }
   });
