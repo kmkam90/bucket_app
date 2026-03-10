@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/goal.dart';
 import '../state/app_state.dart';
+import '../core/result.dart';
 import '../utils/statistics.dart';
+import '../services/file_service.dart';
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
@@ -32,7 +34,10 @@ class ReportScreen extends StatelessWidget {
 
     if (totalGoals == 0) {
       return Scaffold(
-        appBar: AppBar(title: const Text('리포트')),
+        appBar: AppBar(
+          title: const Text('리포트'),
+          actions: const [_BackupMenuButton()],
+        ),
         body: _buildEmptyState(),
       );
     }
@@ -55,7 +60,10 @@ class ReportScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('리포트')),
+      appBar: AppBar(
+        title: const Text('리포트'),
+        actions: const [_BackupMenuButton()],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 32),
         child: Column(
@@ -379,14 +387,132 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildEmptyState() => const _EmptyReportState();
+
   static Widget _leftTitleWidget(double value, TitleMeta meta) {
     return Text(
       '${value.toInt()}%',
       style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
     );
   }
+}
 
-  Widget _buildEmptyState() {
+class _BackupMenuButton extends StatelessWidget {
+  const _BackupMenuButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Color(0xFF9CA3AF)),
+      onSelected: (value) => _onSelected(context, value),
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: 'export',
+          child: Row(
+            children: [
+              Icon(Icons.download_rounded, size: 20, color: Color(0xFF6B7280)),
+              SizedBox(width: 12),
+              Text('데이터 백업'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'import',
+          child: Row(
+            children: [
+              Icon(Icons.upload_rounded, size: 20, color: Color(0xFF6B7280)),
+              SizedBox(width: 12),
+              Text('데이터 복원'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _onSelected(BuildContext context, String value) {
+    if (value == 'export') {
+      _export(context);
+    } else if (value == 'import') {
+      _import(context);
+    }
+  }
+
+  Future<void> _export(BuildContext context) async {
+    final state = context.read<AppState>();
+    final result = await state.export();
+
+    if (!context.mounted) return;
+
+    switch (result) {
+      case Ok(:final data):
+        final now = DateTime.now();
+        final filename = 'bucket_backup_'
+            '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}'
+            '.json';
+        final success = await FileService.downloadJson(data, filename);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? '백업 파일이 다운로드되었습니다.' : '다운로드에 실패했습니다.'),
+          ),
+        );
+      case Err(:final message):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('백업 실패: $message')),
+        );
+    }
+  }
+
+  Future<void> _import(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('데이터 복원'),
+        content: const Text(
+          '백업 파일에서 데이터를 복원하면 현재 데이터가 덮어씌워집니다.\n계속하시겠습니까?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('복원'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    final jsonString = await FileService.pickJsonFile();
+    if (jsonString == null || !context.mounted) return;
+
+    final state = context.read<AppState>();
+    final result = await state.import(jsonString);
+
+    if (!context.mounted) return;
+
+    switch (result) {
+      case Ok():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('데이터가 복원되었습니다.')),
+        );
+      case Err(:final message):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('복원 실패: $message')),
+        );
+    }
+  }
+}
+
+class _EmptyReportState extends StatelessWidget {
+  const _EmptyReportState();
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),

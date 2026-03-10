@@ -35,11 +35,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _addBucketList() async {
     final state = context.read<AppState>();
-    final result = await _showBucketListDialog();
-    if (result == null || (result['title'] as String).trim().isEmpty) return;
+    final title = await _showBucketListDialog();
+    if (title == null || title.trim().isEmpty) return;
     await state.addBucketList(BucketList(
-      title: (result['title'] as String).trim(),
-      category: result['category'] as GoalCategory?,
+      title: title.trim(),
+      category: null,
       items: [],
     ));
   }
@@ -47,14 +47,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _editBucketList(int index) async {
     final state = context.read<AppState>();
     final bucketLists = state.bucketLists;
-    final result = await _showBucketListDialog(
+    final title = await _showBucketListDialog(
       initialText: bucketLists[index].title,
-      initialCategory: bucketLists[index].category,
     );
-    if (result == null || (result['title'] as String).trim().isEmpty) return;
+    if (title == null || title.trim().isEmpty) return;
     final updated = BucketList(
-      title: (result['title'] as String).trim(),
-      category: result['category'] as GoalCategory?,
+      title: title.trim(),
+      category: bucketLists[index].category,
       items: List.from(bucketLists[index].items),
     );
     await state.updateBucketList(index, updated);
@@ -64,42 +63,16 @@ class _HomeScreenState extends State<HomeScreen> {
     await context.read<AppState>().deleteBucketList(index);
   }
 
-  Future<Map<String, dynamic>?> _showBucketListDialog({
-    String? initialText,
-    GoalCategory? initialCategory,
-  }) async {
+  Future<String?> _showBucketListDialog({String? initialText}) async {
     final controller = TextEditingController(text: initialText);
-    GoalCategory? selectedCategory = initialCategory;
-    return showDialog<Map<String, dynamic>>(
+    return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(initialText == null ? '버킷리스트 추가' : '버킷리스트 이름 수정'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: const InputDecoration(hintText: '예: 2026년 버킷리스트'),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<GoalCategory?>(
-              initialValue: selectedCategory,
-              items: [
-                const DropdownMenuItem(value: null, child: Text('카테고리 없음')),
-                ...GoalCategory.values.map((c) => DropdownMenuItem(
-                  value: c,
-                  child: Row(children: [
-                    Icon(goalCategoryIcon(c), size: 18, color: goalCategoryColor(c)),
-                    const SizedBox(width: 8),
-                    Text(goalCategoryLabel(c)),
-                  ]),
-                )),
-              ],
-              onChanged: (v) => selectedCategory = v,
-              decoration: const InputDecoration(labelText: '카테고리'),
-            ),
-          ],
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '예: 여행, 자기개발, 건강'),
         ),
         actions: [
           TextButton(
@@ -107,10 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Text('취소'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop({
-              'title': controller.text,
-              'category': selectedCategory,
-            }),
+            onPressed: () => Navigator.of(context).pop(controller.text),
             child: const Text('확인'),
           ),
         ],
