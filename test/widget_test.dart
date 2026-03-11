@@ -24,11 +24,10 @@ void main() {
     await tester.pumpWidget(_createApp());
     await tester.pumpAndSettle();
 
-    // 하단 네비게이션 바 존재 확인
-    expect(find.text('홈'), findsOneWidget);
-    expect(find.text('목표'), findsOneWidget);
-    expect(find.text('전체'), findsOneWidget);
+    // 하단 네비게이션 바 존재 확인 (3탭)
+    expect(find.text('버킷리스트'), findsWidgets);
     expect(find.text('리포트'), findsOneWidget);
+    expect(find.text('설정'), findsOneWidget);
   });
 
   testWidgets('Home tab shows empty state', (WidgetTester tester) async {
@@ -71,88 +70,29 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
 
-    // 삭제 아이콘 존재 (AppBar의 선택삭제 + 카드의 삭제)
+    // 삭제 아이콘 존재
     expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
   });
 
-  testWidgets('Navigate to goals tab', (WidgetTester tester) async {
+  testWidgets('Navigate to report tab', (WidgetTester tester) async {
     await tester.pumpWidget(_createApp());
     await tester.pumpAndSettle();
 
-    // 목표 탭으로 이동
-    await tester.tap(find.text('목표'));
+    await tester.tap(find.text('리포트'));
     await tester.pumpAndSettle();
 
-    // 연도별 목표 화면 확인
-    expect(find.text('연도별 목표'), findsOneWidget);
-    expect(find.text('아직 등록된 연도가 없어요'), findsOneWidget);
+    expect(find.text('아직 데이터가 없어요'), findsOneWidget);
   });
 
-  testWidgets('Goals tab adds a year', (WidgetTester tester) async {
+  testWidgets('Navigate to settings tab', (WidgetTester tester) async {
     await tester.pumpWidget(_createApp());
     await tester.pumpAndSettle();
 
-    // 목표 탭으로 이동
-    await tester.tap(find.text('목표'));
+    await tester.tap(find.text('설정'));
     await tester.pumpAndSettle();
 
-    // 연도 추가
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '2026');
-    await tester.tap(find.text('추가'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('2026'), findsOneWidget);
-    expect(find.text('목표 0개'), findsOneWidget);
-  });
-
-  testWidgets('Goals tab prevents duplicate year', (WidgetTester tester) async {
-    await tester.pumpWidget(_createApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('목표'));
-    await tester.pumpAndSettle();
-
-    // 첫 번째 연도 추가
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '2026');
-    await tester.tap(find.text('추가'));
-    await tester.pumpAndSettle();
-
-    // 같은 연도 다시 추가 시도
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '2026');
-    await tester.tap(find.text('추가'));
-    await tester.pumpAndSettle();
-
-    // 중복 경고 SnackBar
-    expect(find.text('2026년은 이미 존재합니다.'), findsOneWidget);
-  });
-
-  testWidgets('Year delete button shows confirmation', (WidgetTester tester) async {
-    await tester.pumpWidget(_createApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('목표'));
-    await tester.pumpAndSettle();
-
-    // 연도 추가
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '2026');
-    await tester.tap(find.text('추가'));
-    await tester.pumpAndSettle();
-
-    // 삭제 버튼 탭
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded).first);
-    await tester.pumpAndSettle();
-
-    // 확인 다이얼로그 표시
-    expect(find.text('2026년 삭제'), findsOneWidget);
-    expect(find.text('취소'), findsOneWidget);
-    expect(find.text('삭제'), findsOneWidget);
+    expect(find.text('데이터 관리'), findsOneWidget);
+    expect(find.text('데이터 백업'), findsOneWidget);
+    expect(find.text('데이터 복원'), findsOneWidget);
   });
 }

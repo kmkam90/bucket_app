@@ -6,9 +6,8 @@ import 'core/app_error.dart';
 import 'errors/user_error_message.dart';
 import 'state/app_state.dart';
 import 'screens/home_screen.dart';
-import 'screens/year_list_screen.dart';
-import 'screens/overview_calendar_screen.dart';
 import 'screens/report_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   // Catch synchronous Flutter framework errors
@@ -276,12 +275,10 @@ class _MainTabScreenState extends State<MainTabScreen> {
       });
     }
 
-    final currentYear = DateTime.now().year;
     final screens = [
       const HomeScreen(),
-      const YearListScreen(),
-      OverviewCalendarScreen(year: currentYear),
       const ReportScreen(),
+      const SettingsScreen(),
     ];
     return Scaffold(
       body: screens[_index],
@@ -295,24 +292,19 @@ class _MainTabScreenState extends State<MainTabScreen> {
           onDestinationSelected: (i) => setState(() => _index = i),
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: '홈',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.flag_outlined),
-              selectedIcon: Icon(Icons.flag_rounded),
-              label: '목표',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              selectedIcon: Icon(Icons.grid_view_rounded),
-              label: '전체',
+              icon: Icon(Icons.checklist_outlined),
+              selectedIcon: Icon(Icons.checklist_rounded),
+              label: '버킷리스트',
             ),
             NavigationDestination(
               icon: Icon(Icons.bar_chart_outlined),
               selectedIcon: Icon(Icons.bar_chart_rounded),
               label: '리포트',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings_rounded),
+              label: '설정',
             ),
           ],
         ),

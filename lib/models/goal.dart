@@ -10,13 +10,40 @@ class BucketItem {
   String text;
   bool isDone;
   DateTime? completedAt;
+  DateTime? deadline;
+  BucketItemType goalType;
+  int targetValue;
+  int currentValue;
 
-  BucketItem({required this.text, this.isDone = false, this.completedAt});
+  BucketItem({
+    required this.text,
+    this.isDone = false,
+    this.completedAt,
+    this.deadline,
+    this.goalType = BucketItemType.check,
+    this.targetValue = 0,
+    this.currentValue = 0,
+  });
+
+  double get progressRate {
+    if (goalType == BucketItemType.check) return isDone ? 1.0 : 0.0;
+    if (targetValue <= 0) return 0.0;
+    return (currentValue / targetValue).clamp(0.0, 1.0);
+  }
+
+  bool get isCompleted {
+    if (goalType == BucketItemType.check) return isDone;
+    return targetValue > 0 && currentValue >= targetValue;
+  }
 
   Map<String, dynamic> toMap() => {
     'text': text,
     'isDone': isDone,
     'completedAt': completedAt?.toIso8601String(),
+    'deadline': deadline?.toIso8601String(),
+    'goalType': goalType.name,
+    'targetValue': targetValue,
+    'currentValue': currentValue,
   };
 
   factory BucketItem.fromMap(Map<String, dynamic> map) => BucketItem(
@@ -25,6 +52,17 @@ class BucketItem {
     completedAt: map['completedAt'] != null
         ? DateTime.tryParse(map['completedAt'] as String)
         : null,
+    deadline: map['deadline'] != null
+        ? DateTime.tryParse(map['deadline'] as String)
+        : null,
+    goalType: map['goalType'] != null
+        ? BucketItemType.values.firstWhere(
+            (e) => e.name == map['goalType'],
+            orElse: () => BucketItemType.check,
+          )
+        : BucketItemType.check,
+    targetValue: map['targetValue'] as int? ?? 0,
+    currentValue: map['currentValue'] as int? ?? 0,
   );
 }
 

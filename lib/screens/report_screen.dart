@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../models/goal.dart';
+import '../models/goal.dart'; // BucketList, BucketItem
 import '../state/app_state.dart';
-import '../core/result.dart';
-import '../utils/statistics.dart';
-import '../services/file_service.dart';
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
@@ -21,56 +18,27 @@ class ReportScreen extends StatelessWidget {
     }
 
     final bucketLists = state.bucketLists;
-    final yearPlans = state.yearPlans;
-    final allGoals = yearPlans.expand((yp) => yp.goals).toList();
+    final totalItems = bucketLists.fold<int>(0, (sum, bl) => sum + bl.items.length);
 
-    int totalGoals = 0;
-    for (final bl in bucketLists) {
-      totalGoals += bl.items.length;
-    }
-    for (final yp in yearPlans) {
-      totalGoals += yp.goals.length;
-    }
-
-    if (totalGoals == 0) {
+    if (totalItems == 0) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('리포트'),
-          actions: const [_BackupMenuButton()],
-        ),
+        appBar: AppBar(title: const Text('리포트')),
         body: _buildEmptyState(),
       );
     }
 
-    int completedCount = 0;
-    for (final bl in bucketLists) {
-      completedCount += bl.items.where((i) => i.isDone).length;
-    }
-    for (final yp in yearPlans) {
-      completedCount += yp.goals.where((g) => g.logs.isNotEmpty).length;
-    }
-
-    final completionRate = totalGoals > 0
-        ? ((completedCount / totalGoals) * 100).toStringAsFixed(0)
-        : '0';
-
-    int activeStreaks = 0;
-    for (final g in allGoals) {
-      if (DashboardStatistics.getCurrentStreak(g) > 0) activeStreaks++;
-    }
+    final completedItems = bucketLists.fold<int>(0, (sum, bl) => sum + bl.items.where((i) => i.isDone).length);
+    final completionRate = ((completedItems / totalItems) * 100).toStringAsFixed(0);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('리포트'),
-        actions: const [_BackupMenuButton()],
-      ),
+      appBar: AppBar(title: const Text('리포트')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 32),
         child: Column(
           children: [
-            _buildStatsOverview(totalGoals, completionRate, activeStreaks),
-            _buildWeeklyChart(allGoals, bucketLists),
-            _buildMonthlyTrendChart(allGoals),
+            _buildStatsOverview(bucketLists.length, totalItems, completionRate),
+            _buildWeeklyChart(bucketLists),
+            _buildMonthlyTrendChart(bucketLists),
           ],
         ),
       ),
@@ -108,7 +76,7 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsOverview(int totalGoals, String completionRate, int activeStreaks) {
+  Widget _buildStatsOverview(int listCount, int totalItems, String completionRate) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       decoration: BoxDecoration(
@@ -125,17 +93,17 @@ class ReportScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _buildStatCard('총 목표', '$totalGoals', Icons.flag_rounded, const Color(0xFF7B8CDE)),
+          _buildStatCard('버킷리스트', '$listCount', Icons.checklist_rounded, const Color(0xFF7B8CDE)),
           Container(width: 1, height: 60, color: const Color(0xFFF0F1F3)),
-          _buildStatCard('달성률', '$completionRate%', Icons.check_circle_rounded, const Color(0xFF6BCB8B)),
+          _buildStatCard('항목', '$totalItems', Icons.flag_rounded, const Color(0xFF6BCB8B)),
           Container(width: 1, height: 60, color: const Color(0xFFF0F1F3)),
-          _buildStatCard('스트릭', '$activeStreaks', Icons.local_fire_department, const Color(0xFFE8A87C)),
+          _buildStatCard('달성률', '$completionRate%', Icons.check_circle_rounded, const Color(0xFFE8A87C)),
         ],
       ),
     );
   }
 
-  List<double> _weeklyData(List<Goal> allGoals, List<BucketList> bucketLists) {
+  List<double> _weeklyData(List<BucketList> bucketLists) {
     final now = DateTime.now();
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final data = List<double>.filled(7, 0);
@@ -143,15 +111,6 @@ class ReportScreen extends StatelessWidget {
     for (int d = 0; d < 7; d++) {
       final day = DateTime(monday.year, monday.month, monday.day + d);
       int count = 0;
-      for (final goal in allGoals) {
-        if (goal.logs.any((l) =>
-            l.date.year == day.year &&
-            l.date.month == day.month &&
-            l.date.day == day.day &&
-            l.value >= 1)) {
-          count++;
-        }
-      }
       for (final bl in bucketLists) {
         for (final item in bl.items) {
           if (item.completedAt != null &&
@@ -167,29 +126,28 @@ class ReportScreen extends StatelessWidget {
     return data;
   }
 
-  List<double> _monthlyData(List<Goal> allGoals) {
+  List<double> _monthlyData(List<BucketList> bucketLists) {
     final currentYear = DateTime.now().year;
     final data = List<double>.filled(12, 0);
-    if (allGoals.isEmpty) return data;
 
     for (int m = 1; m <= 12; m++) {
-      int total = 0;
-      int completed = 0;
-      for (final goal in allGoals) {
-        total++;
-        if (goal.logs.any((l) => l.date.year == currentYear && l.date.month == m && l.value >= 1)) {
-          completed++;
+      int count = 0;
+      for (final bl in bucketLists) {
+        for (final item in bl.items) {
+          if (item.completedAt != null &&
+              item.completedAt!.year == currentYear &&
+              item.completedAt!.month == m) {
+            count++;
+          }
         }
       }
-      if (total > 0) {
-        data[m - 1] = (completed / total) * 100;
-      }
+      data[m - 1] = count.toDouble();
     }
     return data;
   }
 
-  Widget _buildWeeklyChart(List<Goal> allGoals, List<BucketList> bucketLists) {
-    final data = _weeklyData(allGoals, bucketLists);
+  Widget _buildWeeklyChart(List<BucketList> bucketLists) {
+    final data = _weeklyData(bucketLists);
     final maxY = data.reduce((a, b) => a > b ? a : b);
     final days = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -276,8 +234,9 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMonthlyTrendChart(List<Goal> allGoals) {
-    final data = _monthlyData(allGoals);
+  Widget _buildMonthlyTrendChart(List<BucketList> bucketLists) {
+    final data = _monthlyData(bucketLists);
+    final maxY = data.reduce((a, b) => a > b ? a : b);
     final months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
     return Container(
@@ -299,7 +258,7 @@ class ReportScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${DateTime.now().year}년 월별 추이',
+            '${DateTime.now().year}년 월별 달성',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF2D3142)),
           ),
           const SizedBox(height: 24),
@@ -308,7 +267,7 @@ class ReportScreen extends StatelessWidget {
             child: LineChart(
               LineChartData(
                 minY: 0,
-                maxY: 100,
+                maxY: maxY > 0 ? maxY + 1 : 5,
                 lineBarsData: [
                   LineChartBarData(
                     spots: List.generate(12, (i) => FlSpot(i.toDouble(), data[i])),
@@ -334,12 +293,11 @@ class ReportScreen extends StatelessWidget {
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: const AxisTitles(
+                  leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 36,
-                      interval: 25,
-                      getTitlesWidget: _leftTitleWidget,
+                      interval: maxY > 0 ? null : 1,
                     ),
                   ),
                   bottomTitles: AxisTitles(
@@ -364,7 +322,6 @@ class ReportScreen extends StatelessWidget {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  horizontalInterval: 25,
                   getDrawingHorizontalLine: (value) => FlLine(
                     color: const Color(0xFFF0F1F3),
                     strokeWidth: 1,
@@ -374,7 +331,7 @@ class ReportScreen extends StatelessWidget {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipItems: (spots) => spots.map((spot) => LineTooltipItem(
-                      '${spot.y.toStringAsFixed(0)}%',
+                      '${spot.y.toInt()}개',
                       const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                     )).toList(),
                   ),
@@ -387,132 +344,7 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() => const _EmptyReportState();
-
-  static Widget _leftTitleWidget(double value, TitleMeta meta) {
-    return Text(
-      '${value.toInt()}%',
-      style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
-    );
-  }
-}
-
-class _BackupMenuButton extends StatelessWidget {
-  const _BackupMenuButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Color(0xFF9CA3AF)),
-      onSelected: (value) => _onSelected(context, value),
-      itemBuilder: (_) => const [
-        PopupMenuItem(
-          value: 'export',
-          child: Row(
-            children: [
-              Icon(Icons.download_rounded, size: 20, color: Color(0xFF6B7280)),
-              SizedBox(width: 12),
-              Text('데이터 백업'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'import',
-          child: Row(
-            children: [
-              Icon(Icons.upload_rounded, size: 20, color: Color(0xFF6B7280)),
-              SizedBox(width: 12),
-              Text('데이터 복원'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _onSelected(BuildContext context, String value) {
-    if (value == 'export') {
-      _export(context);
-    } else if (value == 'import') {
-      _import(context);
-    }
-  }
-
-  Future<void> _export(BuildContext context) async {
-    final state = context.read<AppState>();
-    final result = await state.export();
-
-    if (!context.mounted) return;
-
-    switch (result) {
-      case Ok(:final data):
-        final now = DateTime.now();
-        final filename = 'bucket_backup_'
-            '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}'
-            '.json';
-        final success = await FileService.downloadJson(data, filename);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? '백업 파일이 다운로드되었습니다.' : '다운로드에 실패했습니다.'),
-          ),
-        );
-      case Err(:final message):
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('백업 실패: $message')),
-        );
-    }
-  }
-
-  Future<void> _import(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('데이터 복원'),
-        content: const Text(
-          '백업 파일에서 데이터를 복원하면 현재 데이터가 덮어씌워집니다.\n계속하시겠습니까?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('복원'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true || !context.mounted) return;
-
-    final jsonString = await FileService.pickJsonFile();
-    if (jsonString == null || !context.mounted) return;
-
-    final state = context.read<AppState>();
-    final result = await state.import(jsonString);
-
-    if (!context.mounted) return;
-
-    switch (result) {
-      case Ok():
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('데이터가 복원되었습니다.')),
-        );
-      case Err(:final message):
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('복원 실패: $message')),
-        );
-    }
-  }
-}
-
-class _EmptyReportState extends StatelessWidget {
-  const _EmptyReportState();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildEmptyState() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -535,7 +367,7 @@ class _EmptyReportState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              '목표를 추가하고 기록을 시작해보세요!',
+              '버킷리스트를 추가해보세요!',
               style: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
             ),
           ],

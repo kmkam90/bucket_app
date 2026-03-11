@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/goal.dart';
-import '../models/enums.dart';
 import '../state/app_state.dart';
 import 'bucket_list_detail_screen.dart';
 import '../utils/platform.dart';
@@ -164,14 +163,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: list.category != null
-                          ? goalCategoryColor(list.category!).withValues(alpha: 0.15)
-                          : const Color(0xFFE8EAF0),
+                      color: const Color(0xFFE8EAF0),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      list.category != null ? goalCategoryIcon(list.category!) : Icons.checklist_rounded,
-                      color: list.category != null ? goalCategoryColor(list.category!) : const Color(0xFF7B8CDE),
+                    child: const Icon(
+                      Icons.checklist_rounded,
+                      color: Color(0xFF7B8CDE),
                       size: 20,
                     ),
                   ),

@@ -1,5 +1,35 @@
 import 'package:flutter/material.dart';
 
+// 버킷 아이템 달성 유형
+enum BucketItemType { check, count, time, days }
+
+String bucketItemTypeLabel(BucketItemType type) {
+  switch (type) {
+    case BucketItemType.check: return '체크';
+    case BucketItemType.count: return '횟수';
+    case BucketItemType.time: return '시간';
+    case BucketItemType.days: return '일수';
+  }
+}
+
+String bucketItemTypeUnit(BucketItemType type) {
+  switch (type) {
+    case BucketItemType.check: return '';
+    case BucketItemType.count: return '회';
+    case BucketItemType.time: return '시간';
+    case BucketItemType.days: return '일';
+  }
+}
+
+IconData bucketItemTypeIcon(BucketItemType type) {
+  switch (type) {
+    case BucketItemType.check: return Icons.check_circle_outline_rounded;
+    case BucketItemType.count: return Icons.tag_rounded;
+    case BucketItemType.time: return Icons.timer_outlined;
+    case BucketItemType.days: return Icons.calendar_today_rounded;
+  }
+}
+
 // 측정 방식 타입
 enum GoalMetricType { habit, count, duration }
 

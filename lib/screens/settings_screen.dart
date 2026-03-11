@@ -6,9 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import '../core/result.dart';
 import '../state/app_state.dart';
 
-class OverviewCalendarScreen extends StatelessWidget {
-  final int year;
-  const OverviewCalendarScreen({super.key, required this.year});
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
 
   Future<void> _exportData(BuildContext context) async {
     final state = context.read<AppState>();
@@ -98,81 +97,14 @@ class OverviewCalendarScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF2D3142)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF9CA3AF)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final bucketListCount = state.bucketLists.length;
-    int goalCount = 0;
-    int activeGoals = 0;
-    for (final y in state.yearPlans) {
-      goalCount += y.goals.length;
-      activeGoals += y.goals.where((g) => g.logs.isNotEmpty).length;
-    }
-    final overallRate = goalCount > 0 ? (activeGoals / goalCount * 100).toStringAsFixed(0) : '0';
-
     return Scaffold(
-      appBar: AppBar(title: const Text('전체 보기')),
+      appBar: AppBar(title: const Text('설정')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // 통계 카드
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE5E7EB), width: 0.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2D3142).withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  _buildStatCard('버킷리스트', '$bucketListCount', Icons.checklist_rounded, const Color(0xFF7B8CDE)),
-                  Container(width: 1, height: 60, color: const Color(0xFFF0F1F3)),
-                  _buildStatCard('목표', '$goalCount', Icons.flag_rounded, const Color(0xFF6BCB8B)),
-                  Container(width: 1, height: 60, color: const Color(0xFFF0F1F3)),
-                  _buildStatCard('진행률', '$overallRate%', Icons.trending_up_rounded, const Color(0xFFE8A87C)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // 데이터 관리
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -233,7 +165,6 @@ class OverviewCalendarScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const Spacer(),
           ],
         ),
       ),
