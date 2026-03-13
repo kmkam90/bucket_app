@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/goal.dart';
 import '../state/app_state.dart';
-import 'bucket_list_detail_screen.dart';
+import 'goal_list_screen.dart';
 import '../utils/platform.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _navigateToDetail(int index, BucketList list) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => BucketListDetailScreen(
+        builder: (context) => GoalListScreen(
           listIndex: index,
           bucketList: list,
         ),

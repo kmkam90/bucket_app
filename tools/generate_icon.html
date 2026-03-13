@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Bucket App Icon Generator</title>
+<style>
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #1a1a2e;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px;
+  }
+  h1 { margin-bottom: 10px; }
+  p { color: #aaa; margin-bottom: 30px; }
+  .controls {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    justify-content: center; margin-bottom: 30px;
+  }
+  .control-group { text-align: center; }
+  .control-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #aaa; }
+  canvas { border-radius: 180px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .preview-row { display: flex; gap: 30px; align-items: end; margin-top: 30px; }
+  .preview { text-align: center; }
+  .preview canvas { border-radius: 22%; }
+  .preview span { display: block; margin-top: 8px; font-size: 12px; color: #aaa; }
+  button {
+    margin-top: 30px; padding: 14px 40px;
+    background: #6c5ce7; color: #fff; border: none;
+    border-radius: 12px; font-size: 16px; cursor: pointer;
+    font-weight: 600;
+  }
+  button:hover { background: #5a4bd1; }
+  .designs { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
+  .design-btn {
+    padding: 10px 20px; background: #2d2d44; border: 2px solid #3d3d5c;
+    color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px;
+  }
+  .design-btn.active { border-color: #6c5ce7; background: #3d3d5c; }
+</style>
+</head>
+<body>
+
+<h1>Bucket App Icon Generator</h1>
+<p>1024x1024 App Store icon</p>
+
+<div class="designs">
+  <button class="design-btn active" onclick="setDesign(0)">Design A: Checklist</button>
+  <button class="design-btn" onclick="setDesign(1)">Design B: Flag</button>
+  <button class="design-btn" onclick="setDesign(2)">Design C: Target</button>
+  <button class="design-btn" onclick="setDesign(3)">Design D: Mountain</button>
+  <button class="design-btn" onclick="setDesign(4)">Design E: Star Check</button>
+</div>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Color 1</label>
+    <input type="color" id="color1" value="#6c5ce7" onchange="render()">
+  </div>
+  <div class="control-group">
+    <label>Color 2</label>
+    <input type="color" id="color2" value="#a29bfe" onchange="render()">
+  </div>
+  <div class="control-group">
+    <label>Background</label>
+    <input type="color" id="bgColor" value="#ffffff" onchange="render()">
+  </div>
+  <div class="control-group">
+    <label>Icon Color</label>
+    <input type="color" id="iconColor" value="#6c5ce7" onchange="render()">
+  </div>
+</div>
+
+<canvas id="main" width="1024" height="1024"></canvas>
+
+<div class="preview-row">
+  <div class="preview">
+    <canvas id="p180" width="180" height="180"></canvas>
+    <span>Home Screen (60pt @3x)</span>
+  </div>
+  <div class="preview">
+    <canvas id="p120" width="120" height="120"></canvas>
+    <span>Spotlight (40pt @3x)</span>
+  </div>
+  <div class="preview">
+    <canvas id="p87" width="87" height="87"></canvas>
+    <span>Settings (29pt @3x)</span>
+  </div>
+</div>
+
+<button onclick="download()">Download 1024x1024 PNG</button>
+
+<script>
+let currentDesign = 0;
+
+function setDesign(index) {
+  currentDesign = index;
+  document.querySelectorAll('.design-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+
+  const presets = [
+    { c1: '#6c5ce7', c2: '#a29bfe', bg: '#ffffff', ic: '#6c5ce7' },
+    { c1: '#00b894', c2: '#55efc4', bg: '#ffffff', ic: '#00b894' },
+    { c1: '#e17055', c2: '#fab1a0', bg: '#ffffff', ic: '#e17055' },
+    { c1: '#0984e3', c2: '#74b9ff', bg: '#ffffff', ic: '#0984e3' },
+    { c1: '#fdcb6e', c2: '#ffeaa7', bg: '#2d3436', ic: '#fdcb6e' },
+  ];
+
+  const p = presets[index];
+  document.getElementById('color1').value = p.c1;
+  document.getElementById('color2').value = p.c2;
+  document.getElementById('bgColor').value = p.bg;
+  document.getElementById('iconColor').value = p.ic;
+  render();
+}
+
+function render() {
+  const canvas = document.getElementById('main');
+  const ctx = canvas.getContext('2d');
+  const s = 1024;
+
+  const c1 = document.getElementById('color1').value;
+  const c2 = document.getElementById('color2').value;
+  const bg = document.getElementById('bgColor').value;
+  const ic = document.getElementById('iconColor').value;
+
+  // Background
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, s, s);
+
+  // Subtle gradient overlay
+  const bgGrad = ctx.createRadialGradient(s/2, s/3, 0, s/2, s/2, s*0.7);
+  bgGrad.addColorStop(0, c2 + '15');
+  bgGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, s, s);
+
+  switch(currentDesign) {
+    case 0: drawChecklist(ctx, s, c1, c2, ic); break;
+    case 1: drawFlag(ctx, s, c1, c2, ic); break;
+    case 2: drawTarget(ctx, s, c1, c2, ic); break;
+    case 3: drawMountain(ctx, s, c1, c2, ic); break;
+    case 4: drawStarCheck(ctx, s, c1, c2, ic); break;
+  }
+
+  // Render previews
+  ['p180','p120','p87'].forEach(id => {
+    const pc = document.getElementById(id);
+    const pctx = pc.getContext('2d');
+    pctx.clearRect(0, 0, pc.width, pc.height);
+    pctx.drawImage(canvas, 0, 0, pc.width, pc.height);
+  });
+}
+
+function drawChecklist(ctx, s, c1, c2, ic) {
+  const cx = s/2, cy = s/2;
+
+  // Circle background
+  ctx.beginPath();
+  ctx.arc(cx, cy, s*0.32, 0, Math.PI*2);
+  const grad = ctx.createLinearGradient(cx-s*0.3, cy-s*0.3, cx+s*0.3, cy+s*0.3);
+  grad.addColorStop(0, c1);
+  grad.addColorStop(1, c2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Checkmark
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.05;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - s*0.12, cy + s*0.01);
+  ctx.lineTo(cx - s*0.03, cy + s*0.11);
+  ctx.lineTo(cx + s*0.14, cy - s*0.09);
+  ctx.stroke();
+
+  // Small decorative dots
+  const dots = [
+    {x: cx-s*0.28, y: cy-s*0.28, r: s*0.025},
+    {x: cx+s*0.30, y: cy-s*0.22, r: s*0.018},
+    {x: cx+s*0.25, y: cy+s*0.30, r: s*0.022},
+    {x: cx-s*0.32, y: cy+s*0.18, r: s*0.015},
+  ];
+  dots.forEach(d => {
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+    ctx.fillStyle = c2 + '60';
+    ctx.fill();
+  });
+}
+
+function drawFlag(ctx, s, c1, c2, ic) {
+  const cx = s/2, cy = s/2;
+
+  // Flag pole
+  ctx.strokeStyle = ic;
+  ctx.lineWidth = s * 0.03;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - s*0.08, cy + s*0.22);
+  ctx.lineTo(cx - s*0.08, cy - s*0.22);
+  ctx.stroke();
+
+  // Flag
+  ctx.beginPath();
+  ctx.moveTo(cx - s*0.08, cy - s*0.22);
+  ctx.quadraticCurveTo(cx + s*0.08, cy - s*0.28, cx + s*0.18, cy - s*0.15);
+  ctx.lineTo(cx + s*0.18, cy - s*0.02);
+  ctx.quadraticCurveTo(cx + s*0.08, cy - s*0.09, cx - s*0.08, cy - s*0.02);
+  ctx.closePath();
+  const flagGrad = ctx.createLinearGradient(cx-s*0.08, cy-s*0.25, cx+s*0.18, cy);
+  flagGrad.addColorStop(0, c1);
+  flagGrad.addColorStop(1, c2);
+  ctx.fillStyle = flagGrad;
+  ctx.fill();
+
+  // Small check on flag
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.025;
+  ctx.beginPath();
+  ctx.moveTo(cx - s*0.01, cy - s*0.13);
+  ctx.lineTo(cx + s*0.03, cy - s*0.09);
+  ctx.lineTo(cx + s*0.10, cy - s*0.18);
+  ctx.stroke();
+
+  // Base circle
+  ctx.beginPath();
+  ctx.arc(cx - s*0.08, cy + s*0.25, s*0.04, 0, Math.PI*2);
+  ctx.fillStyle = c2 + '40';
+  ctx.fill();
+}
+
+function drawTarget(ctx, s, c1, c2, ic) {
+  const cx = s/2, cy = s/2;
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, s*0.30, 0, Math.PI*2);
+  ctx.strokeStyle = c2 + '40';
+  ctx.lineWidth = s * 0.03;
+  ctx.stroke();
+
+  // Middle ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, s*0.21, 0, Math.PI*2);
+  ctx.strokeStyle = c2 + '60';
+  ctx.lineWidth = s * 0.025;
+  ctx.stroke();
+
+  // Inner circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, s*0.12, 0, Math.PI*2);
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, s*0.12);
+  grad.addColorStop(0, c1);
+  grad.addColorStop(1, c2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Center check
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.035;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - s*0.05, cy + s*0.005);
+  ctx.lineTo(cx - s*0.015, cy + s*0.045);
+  ctx.lineTo(cx + s*0.06, cy - s*0.035);
+  ctx.stroke();
+
+  // Progress arc (75%)
+  ctx.beginPath();
+  ctx.arc(cx, cy, s*0.30, -Math.PI/2, -Math.PI/2 + Math.PI*1.5);
+  ctx.strokeStyle = c1;
+  ctx.lineWidth = s * 0.03;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+function drawMountain(ctx, s, c1, c2, ic) {
+  const cx = s/2, cy = s/2;
+
+  // Mountain
+  ctx.beginPath();
+  ctx.moveTo(cx - s*0.28, cy + s*0.18);
+  ctx.lineTo(cx - s*0.05, cy - s*0.18);
+  ctx.lineTo(cx + s*0.02, cy - s*0.08);
+  ctx.lineTo(cx + s*0.10, cy - s*0.22);
+  ctx.lineTo(cx + s*0.30, cy + s*0.18);
+  ctx.closePath();
+  const mGrad = ctx.createLinearGradient(cx, cy - s*0.22, cx, cy + s*0.18);
+  mGrad.addColorStop(0, c1);
+  mGrad.addColorStop(1, c2);
+  ctx.fillStyle = mGrad;
+  ctx.fill();
+
+  // Snow cap
+  ctx.beginPath();
+  ctx.moveTo(cx + s*0.10, cy - s*0.22);
+  ctx.lineTo(cx + s*0.05, cy - s*0.12);
+  ctx.lineTo(cx + s*0.08, cy - s*0.10);
+  ctx.lineTo(cx + s*0.12, cy - s*0.14);
+  ctx.lineTo(cx + s*0.15, cy - s*0.12);
+  ctx.closePath();
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Flag on peak
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.015;
+  ctx.beginPath();
+  ctx.moveTo(cx + s*0.10, cy - s*0.22);
+  ctx.lineTo(cx + s*0.10, cy - s*0.32);
+  ctx.stroke();
+
+  // Flag cloth
+  ctx.beginPath();
+  ctx.moveTo(cx + s*0.10, cy - s*0.32);
+  ctx.lineTo(cx + s*0.20, cy - s*0.28);
+  ctx.lineTo(cx + s*0.10, cy - s*0.24);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+}
+
+function drawStarCheck(ctx, s, c1, c2, ic) {
+  const cx = s/2, cy = s/2;
+
+  // Star shape
+  const points = 5;
+  const outerR = s * 0.32;
+  const innerR = s * 0.14;
+
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const angle = (i * Math.PI / points) - Math.PI / 2;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(cx - outerR, cy - outerR, cx + outerR, cy + outerR);
+  grad.addColorStop(0, c1);
+  grad.addColorStop(1, c2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Checkmark
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.045;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - s*0.09, cy + s*0.01);
+  ctx.lineTo(cx - s*0.02, cy + s*0.09);
+  ctx.lineTo(cx + s*0.11, cy - s*0.07);
+  ctx.stroke();
+}
+
+function download() {
+  const canvas = document.getElementById('main');
+  const link = document.createElement('a');
+  link.download = 'app_icon_1024x1024.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>

@@ -14,6 +14,10 @@ class BucketItem {
   BucketItemType goalType;
   int targetValue;
   int currentValue;
+  GoalTargetMode targetMode;
+  int timesPerWeek;
+  String unit;
+  List<String> completedDates; // ISO date strings for frequency tracking
 
   BucketItem({
     required this.text,
@@ -23,17 +27,98 @@ class BucketItem {
     this.goalType = BucketItemType.check,
     this.targetValue = 0,
     this.currentValue = 0,
-  });
+    this.targetMode = GoalTargetMode.total,
+    this.timesPerWeek = 3,
+    this.unit = '',
+    List<String>? completedDates,
+  }) : completedDates = completedDates ?? [];
 
   double get progressRate {
     if (goalType == BucketItemType.check) return isDone ? 1.0 : 0.0;
+    if (targetMode == GoalTargetMode.frequency) {
+      return _weeklyCompletionRate;
+    }
     if (targetValue <= 0) return 0.0;
     return (currentValue / targetValue).clamp(0.0, 1.0);
   }
 
   bool get isCompleted {
     if (goalType == BucketItemType.check) return isDone;
+    if (targetMode == GoalTargetMode.frequency) return _weeklyCompletionRate >= 1.0;
     return targetValue > 0 && currentValue >= targetValue;
+  }
+
+  /// This week's completion rate for frequency mode
+  double get _weeklyCompletionRate {
+    if (timesPerWeek <= 0) return 0.0;
+    final now = DateTime.now();
+    final weekday = now.weekday; // 1=Mon, 7=Sun
+    final weekStart = DateTime(now.year, now.month, now.day - (weekday - 1));
+    int count = 0;
+    for (final ds in completedDates) {
+      final d = DateTime.tryParse(ds);
+      if (d != null && !d.isBefore(weekStart) && d.isBefore(weekStart.add(const Duration(days: 7)))) {
+        count++;
+      }
+    }
+    return (count / timesPerWeek).clamp(0.0, 1.0);
+  }
+
+  /// Monthly completion count
+  int monthlyCompletionCount(int year, int month) {
+    int count = 0;
+    for (final ds in completedDates) {
+      final d = DateTime.tryParse(ds);
+      if (d != null && d.year == year && d.month == month) count++;
+    }
+    return count;
+  }
+
+  /// Yearly completion count
+  int yearlyCompletionCount(int year) {
+    int count = 0;
+    for (final ds in completedDates) {
+      final d = DateTime.tryParse(ds);
+      if (d != null && d.year == year) count++;
+    }
+    return count;
+  }
+
+  /// Monthly achievement rate for frequency mode
+  double monthlyAchievementRate(int year, int month) {
+    if (targetMode != GoalTargetMode.frequency || timesPerWeek <= 0) return 0.0;
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    final weeksInMonth = daysInMonth / 7.0;
+    final target = (timesPerWeek * weeksInMonth).round();
+    if (target <= 0) return 0.0;
+    return (monthlyCompletionCount(year, month) / target).clamp(0.0, 1.0);
+  }
+
+  /// Yearly achievement rate for frequency mode
+  double yearlyAchievementRate(int year) {
+    if (targetMode != GoalTargetMode.frequency || timesPerWeek <= 0) return 0.0;
+    final totalWeeks = 52;
+    final target = timesPerWeek * totalWeeks;
+    if (target <= 0) return 0.0;
+    return (yearlyCompletionCount(year) / target).clamp(0.0, 1.0);
+  }
+
+  /// Toggle completion for a specific date (frequency mode)
+  bool toggleDate(DateTime date) {
+    final ds = '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    if (completedDates.contains(ds)) {
+      completedDates.remove(ds);
+      return false;
+    } else {
+      completedDates.add(ds);
+      return true;
+    }
+  }
+
+  /// Check if a date is completed
+  bool isDateCompleted(DateTime date) {
+    final ds = '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return completedDates.contains(ds);
   }
 
   Map<String, dynamic> toMap() => {
@@ -44,6 +129,10 @@ class BucketItem {
     'goalType': goalType.name,
     'targetValue': targetValue,
     'currentValue': currentValue,
+    'targetMode': targetMode.name,
+    'timesPerWeek': timesPerWeek,
+    'unit': unit,
+    'completedDates': completedDates,
   };
 
   factory BucketItem.fromMap(Map<String, dynamic> map) => BucketItem(
@@ -63,6 +152,17 @@ class BucketItem {
         : BucketItemType.check,
     targetValue: map['targetValue'] as int? ?? 0,
     currentValue: map['currentValue'] as int? ?? 0,
+    targetMode: map['targetMode'] != null
+        ? GoalTargetMode.values.firstWhere(
+            (e) => e.name == map['targetMode'],
+            orElse: () => GoalTargetMode.total,
+          )
+        : GoalTargetMode.total,
+    timesPerWeek: map['timesPerWeek'] as int? ?? 3,
+    unit: map['unit'] as String? ?? '',
+    completedDates: (map['completedDates'] as List<dynamic>?)
+        ?.map((e) => e as String)
+        .toList(),
   );
 }
 
