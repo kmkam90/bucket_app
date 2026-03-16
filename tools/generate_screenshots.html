@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>App Store Screenshot Generator</title>
+<style>
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #1a1a2e;
+    color: #fff;
+    padding: 30px;
+    text-align: center;
+  }
+  h1 { margin-bottom: 10px; }
+  p { color: #aaa; margin-bottom: 20px; }
+  .screenshots {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 20px 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .screenshot-wrapper {
+    text-align: center;
+  }
+  .screenshot-wrapper span {
+    display: block;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #aaa;
+  }
+  canvas {
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  .preview-canvas {
+    width: 180px;
+    height: auto;
+    cursor: pointer;
+  }
+  button {
+    margin: 10px 8px;
+    padding: 12px 28px;
+    background: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button:hover { background: #43A047; }
+  .btn-all { background: #2196F3; }
+  .btn-all:hover { background: #1976D2; }
+  .note {
+    background: #2d2d44;
+    padding: 16px 24px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #ccc;
+  }
+</style>
+</head>
+<body>
+
+<h1>App Store Screenshots</h1>
+<p>1242 x 2688px (6.5" iPhone) — Click each to download</p>
+<div class="note">5장 모두 다운로드하여 App Store Connect에 업로드하세요</div>
+
+<div class="screenshots" id="previews"></div>
+
+<div style="margin-top: 20px;">
+  <button class="btn-all" onclick="downloadAll()">Download All (5 screenshots)</button>
+</div>
+
+<!-- Hidden full-size canvases -->
+<div style="display:none" id="hidden"></div>
+
+<script>
+const W = 1242;
+const H = 2688;
+const SCALE = W / 180; // preview scale
+
+const screenshots = [
+  {
+    id: 1,
+    caption: "올해 이루고 싶은\n목표를 한곳에",
+    subcaption: "카테고리별로 자유롭게 정리하세요",
+    screen: "home"
+  },
+  {
+    id: 2,
+    caption: "나만의 방식으로\n진행률 추적",
+    subcaption: "횟수, 시간, 일수 기반 추적",
+    screen: "detail"
+  },
+  {
+    id: 3,
+    caption: "간단하게\n목표 추가",
+    subcaption: "체크, 횟수, 시간, 일수 중 선택",
+    screen: "add"
+  },
+  {
+    id: 4,
+    caption: "한눈에 보는\n달성 현황",
+    subcaption: "이번 달, 올해 진행률 확인",
+    screen: "report"
+  },
+  {
+    id: 5,
+    caption: "로그인 없이\n바로 시작",
+    subcaption: "오프라인에서도 사용 가능",
+    screen: "settings"
+  }
+];
+
+function drawScreen(ctx, type, x, y, w, h) {
+  const r = w * 0.04;
+  const padding = w * 0.05;
+
+  // Phone frame
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+
+  // Screen background
+  ctx.fillStyle = '#FAFAFA';
+  ctx.fillRect(x, y, w, h);
+
+  // Status bar
+  const statusH = h * 0.04;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(x, y, w, statusH);
+  ctx.fillStyle = '#333';
+  ctx.font = `${w * 0.035}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('9:41', x + w * 0.07, y + statusH * 0.7);
+
+  const contentY = y + statusH;
+  const contentH = h - statusH;
+
+  switch(type) {
+    case 'home': drawHomeScreen(ctx, x, contentY, w, contentH); break;
+    case 'detail': drawDetailScreen(ctx, x, contentY, w, contentH); break;
+    case 'add': drawAddScreen(ctx, x, contentY, w, contentH); break;
+    case 'report': drawReportScreen(ctx, x, contentY, w, contentH); break;
+    case 'settings': drawSettingsScreen(ctx, x, contentY, w, contentH); break;
+  }
+
+  ctx.restore();
+
+  // Phone border
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = w * 0.005;
+  roundRect(ctx, x, y, w, h, r);
+  ctx.stroke();
+}
+
+function drawHomeScreen(ctx, x, y, w, h) {
+  // App bar
+  const barH = h * 0.07;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(x, y, w, barH);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `bold ${w * 0.055}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('버킷리스트', x + w * 0.06, y + barH * 0.65);
+
+  // FAB
+  ctx.beginPath();
+  ctx.arc(x + w * 0.88, y + h * 0.85, w * 0.06, 0, Math.PI * 2);
+  ctx.fillStyle = '#4CAF50';
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = `${w * 0.07}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('+', x + w * 0.88, y + h * 0.85 + w * 0.025);
+
+  // Cards
+  const cards = [
+    { title: '2026 버킷리스트', count: '3/8', progress: 0.375, color: '#4CAF50' },
+    { title: '여행', count: '1/5', progress: 0.2, color: '#2196F3' },
+    { title: '자기계발', count: '2/4', progress: 0.5, color: '#FF9800' },
+    { title: '건강', count: '0/3', progress: 0, color: '#E91E63' },
+  ];
+
+  let cardY = y + barH + h * 0.02;
+  const cardH = h * 0.12;
+  const cardGap = h * 0.015;
+  const cardX = x + w * 0.05;
+  const cardW = w * 0.9;
+
+  cards.forEach((card, i) => {
+    // Card bg
+    ctx.fillStyle = '#FFFFFF';
+    roundRect(ctx, cardX, cardY, cardW, cardH, w * 0.025);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Card shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.06)';
+    ctx.shadowBlur = w * 0.02;
+    ctx.shadowOffsetY = w * 0.005;
+    ctx.fillStyle = '#FFFFFF';
+    roundRect(ctx, cardX, cardY, cardW, cardH, w * 0.025);
+    ctx.fill();
+    ctx.restore();
+
+    // Color indicator
+    ctx.fillStyle = card.color;
+    roundRect(ctx, cardX, cardY, w * 0.015, cardH, w * 0.025);
+    ctx.fill();
+    ctx.fillRect(cardX + w * 0.01, cardY, w * 0.01, cardH);
+
+    // Title
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = `600 ${w * 0.04}px -apple-system, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(card.title, cardX + w * 0.06, cardY + cardH * 0.35);
+
+    // Count
+    ctx.fillStyle = '#888';
+    ctx.font = `${w * 0.032}px -apple-system, sans-serif`;
+    ctx.fillText(card.count + ' 완료', cardX + w * 0.06, cardY + cardH * 0.58);
+
+    // Progress bar bg
+    const barX = cardX + w * 0.06;
+    const barY2 = cardY + cardH * 0.72;
+    const barW = cardW * 0.75;
+    const barH2 = h * 0.008;
+    ctx.fillStyle = '#E0E0E0';
+    roundRect(ctx, barX, barY2, barW, barH2, barH2 / 2);
+    ctx.fill();
+
+    // Progress bar fill
+    if (card.progress > 0) {
+      ctx.fillStyle = card.color;
+      roundRect(ctx, barX, barY2, barW * card.progress, barH2, barH2 / 2);
+      ctx.fill();
+    }
+
+    // Percentage
+    ctx.fillStyle = card.color;
+    ctx.font = `bold ${w * 0.032}px -apple-system, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(card.progress * 100) + '%', cardX + cardW - w * 0.04, cardY + cardH * 0.45);
+
+    cardY += cardH + cardGap;
+  });
+
+  // Bottom nav
+  drawBottomNav(ctx, x, y + h * 0.92, w, h * 0.08, 0);
+}
+
+function drawDetailScreen(ctx, x, y, w, h) {
+  // App bar
+  const barH = h * 0.07;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(x, y, w, barH);
+  ctx.fillStyle = '#888';
+  ctx.font = `${w * 0.04}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('←', x + w * 0.04, y + barH * 0.6);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `bold ${w * 0.05}px -apple-system, sans-serif`;
+  ctx.fillText('2026 버킷리스트', x + w * 0.12, y + barH * 0.63);
+
+  // Items
+  const items = [
+    { title: '스카이다이빙', type: '체크', done: true, progress: 1 },
+    { title: '유럽 배낭여행', type: '일수', done: false, progress: 0.67, detail: '20/30일' },
+    { title: '책 10권 읽기', type: '횟수', done: false, progress: 0.3, detail: '3/10회' },
+    { title: '마라톤 완주', type: '체크', done: false, progress: 0 },
+    { title: '일본어 공부', type: '시간', done: false, progress: 0.45, detail: '45/100시간' },
+  ];
+
+  let itemY = y + barH + h * 0.02;
+  const itemH = h * 0.1;
+  const itemGap = h * 0.012;
+  const itemX = x + w * 0.05;
+  const itemW = w * 0.9;
+
+  items.forEach(item => {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.05)';
+    ctx.shadowBlur = w * 0.015;
+    ctx.shadowOffsetY = w * 0.003;
+    ctx.fillStyle = '#FFFFFF';
+    roundRect(ctx, itemX, itemY, itemW, itemH, w * 0.02);
+    ctx.fill();
+    ctx.restore();
+
+    // Checkbox
+    const cbX = itemX + w * 0.05;
+    const cbY = itemY + itemH * 0.3;
+    const cbR = w * 0.025;
+    ctx.beginPath();
+    ctx.arc(cbX, cbY, cbR, 0, Math.PI * 2);
+    if (item.done) {
+      ctx.fillStyle = '#4CAF50';
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${w * 0.03}px -apple-system, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('✓', cbX, cbY + w * 0.01);
+    } else {
+      ctx.strokeStyle = '#CCC';
+      ctx.lineWidth = w * 0.004;
+      ctx.stroke();
+    }
+
+    // Title
+    ctx.fillStyle = item.done ? '#aaa' : '#1a1a1a';
+    ctx.font = `${item.done ? '' : '500 '}${w * 0.038}px -apple-system, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(item.title, itemX + w * 0.12, itemY + itemH * 0.33);
+
+    // Type chip
+    ctx.fillStyle = '#E8F5E9';
+    const chipX = itemX + w * 0.12;
+    const chipY = itemY + itemH * 0.5;
+    roundRect(ctx, chipX, chipY, w * 0.1, h * 0.022, w * 0.01);
+    ctx.fill();
+    ctx.fillStyle = '#4CAF50';
+    ctx.font = `${w * 0.025}px -apple-system, sans-serif`;
+    ctx.fillText(item.type, chipX + w * 0.015, chipY + h * 0.016);
+
+    // Progress bar
+    if (!item.done && item.progress > 0) {
+      const pBarX = itemX + w * 0.12;
+      const pBarY = itemY + itemH * 0.78;
+      const pBarW = itemW * 0.6;
+      const pBarH = h * 0.006;
+      ctx.fillStyle = '#E0E0E0';
+      roundRect(ctx, pBarX, pBarY, pBarW, pBarH, pBarH / 2);
+      ctx.fill();
+      ctx.fillStyle = '#4CAF50';
+      roundRect(ctx, pBarX, pBarY, pBarW * item.progress, pBarH, pBarH / 2);
+      ctx.fill();
+
+      if (item.detail) {
+        ctx.fillStyle = '#888';
+        ctx.font = `${w * 0.025}px -apple-system, sans-serif`;
+        ctx.fillText(item.detail, pBarX + pBarW + w * 0.02, pBarY + pBarH);
+      }
+    }
+
+    itemY += itemH + itemGap;
+  });
+
+  drawBottomNav(ctx, x, y + h * 0.92, w, h * 0.08, 0);
+}
+
+function drawAddScreen(ctx, x, y, w, h) {
+  // Background with overlay
+  drawHomeScreen(ctx, x, y, w, h);
+
+  // Dim overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(x, y, w, h);
+
+  // Dialog
+  const dW = w * 0.85;
+  const dH = h * 0.45;
+  const dX = x + (w - dW) / 2;
+  const dY = y + h * 0.2;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.2)';
+  ctx.shadowBlur = w * 0.05;
+  ctx.fillStyle = '#FFFFFF';
+  roundRect(ctx, dX, dY, dW, dH, w * 0.04);
+  ctx.fill();
+  ctx.restore();
+
+  // Dialog title
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `bold ${w * 0.05}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('새 목표 추가', x + w / 2, dY + dH * 0.1);
+
+  // Input field
+  const inputY = dY + dH * 0.16;
+  ctx.fillStyle = '#F5F5F5';
+  roundRect(ctx, dX + w * 0.05, inputY, dW - w * 0.1, h * 0.045, w * 0.015);
+  ctx.fill();
+  ctx.fillStyle = '#333';
+  ctx.font = `${w * 0.035}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('마라톤 완주', dX + w * 0.08, inputY + h * 0.03);
+
+  // Label
+  ctx.fillStyle = '#888';
+  ctx.font = `${w * 0.03}px -apple-system, sans-serif`;
+  ctx.fillText('목표 유형', dX + w * 0.05, dY + dH * 0.33);
+
+  // Type buttons
+  const types = ['체크', '횟수', '시간', '일수'];
+  const btnW = (dW - w * 0.14) / 4;
+  types.forEach((t, i) => {
+    const bX = dX + w * 0.05 + i * (btnW + w * 0.01);
+    const bY = dY + dH * 0.37;
+    const bH = h * 0.04;
+
+    if (i === 0) {
+      ctx.fillStyle = '#4CAF50';
+      roundRect(ctx, bX, bY, btnW, bH, w * 0.012);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+    } else {
+      ctx.fillStyle = '#F0F0F0';
+      roundRect(ctx, bX, bY, btnW, bH, w * 0.012);
+      ctx.fill();
+      ctx.fillStyle = '#666';
+    }
+    ctx.font = `${w * 0.03}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(t, bX + btnW / 2, bY + bH * 0.65);
+  });
+
+  // Deadline toggle
+  ctx.fillStyle = '#888';
+  ctx.font = `${w * 0.03}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('마감일 설정 (선택)', dX + w * 0.05, dY + dH * 0.58);
+
+  // Date
+  ctx.fillStyle = '#F5F5F5';
+  roundRect(ctx, dX + w * 0.05, dY + dH * 0.62, dW - w * 0.1, h * 0.04, w * 0.012);
+  ctx.fill();
+  ctx.fillStyle = '#333';
+  ctx.font = `${w * 0.032}px -apple-system, sans-serif`;
+  ctx.fillText('2026-12-31', dX + w * 0.08, dY + dH * 0.62 + h * 0.028);
+
+  // Buttons
+  const cancelX = dX + w * 0.05;
+  const saveX = dX + dW / 2 + w * 0.01;
+  const btnY2 = dY + dH * 0.82;
+  const btnW2 = (dW - w * 0.12) / 2;
+  const btnH2 = h * 0.045;
+
+  ctx.fillStyle = '#F0F0F0';
+  roundRect(ctx, cancelX, btnY2, btnW2, btnH2, w * 0.015);
+  ctx.fill();
+  ctx.fillStyle = '#666';
+  ctx.textAlign = 'center';
+  ctx.font = `500 ${w * 0.035}px -apple-system, sans-serif`;
+  ctx.fillText('취소', cancelX + btnW2 / 2, btnY2 + btnH2 * 0.65);
+
+  ctx.fillStyle = '#4CAF50';
+  roundRect(ctx, saveX, btnY2, btnW2, btnH2, w * 0.015);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillText('추가', saveX + btnW2 / 2, btnY2 + btnH2 * 0.65);
+}
+
+function drawReportScreen(ctx, x, y, w, h) {
+  const barH = h * 0.07;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(x, y, w, barH);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `bold ${w * 0.055}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('리포트', x + w * 0.06, y + barH * 0.65);
+
+  // Summary cards
+  const stats = [
+    { label: '전체 목표', value: '20', color: '#2196F3' },
+    { label: '완료', value: '6', color: '#4CAF50' },
+    { label: '진행 중', value: '14', color: '#FF9800' },
+  ];
+
+  const statW = (w * 0.84) / 3;
+  const statH = h * 0.09;
+  const statY = y + barH + h * 0.02;
+
+  stats.forEach((s, i) => {
+    const sx = x + w * 0.05 + i * (statW + w * 0.03);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.05)';
+    ctx.shadowBlur = w * 0.01;
+    ctx.fillStyle = '#FFFFFF';
+    roundRect(ctx, sx, statY, statW, statH, w * 0.02);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = s.color;
+    ctx.font = `bold ${w * 0.065}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(s.value, sx + statW / 2, statY + statH * 0.5);
+    ctx.fillStyle = '#888';
+    ctx.font = `${w * 0.028}px -apple-system, sans-serif`;
+    ctx.fillText(s.label, sx + statW / 2, statY + statH * 0.78);
+  });
+
+  // Chart area
+  const chartY = statY + statH + h * 0.04;
+  const chartH = h * 0.3;
+  const chartX = x + w * 0.05;
+  const chartW = w * 0.9;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.05)';
+  ctx.shadowBlur = w * 0.01;
+  ctx.fillStyle = '#FFFFFF';
+  roundRect(ctx, chartX, chartY, chartW, chartH, w * 0.025);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `600 ${w * 0.038}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('월별 달성률', chartX + w * 0.04, chartY + chartH * 0.12);
+
+  // Bar chart
+  const months = ['1월','2월','3월','4월','5월','6월'];
+  const values = [0.8, 0.6, 0.9, 0.4, 0.7, 0.3];
+  const barAreaY = chartY + chartH * 0.2;
+  const barAreaH = chartH * 0.65;
+
+  months.forEach((m, i) => {
+    const bx = chartX + w * 0.06 + i * (chartW * 0.14);
+    const bw = chartW * 0.08;
+    const bh = barAreaH * values[i];
+    const by = barAreaY + barAreaH - bh;
+
+    const grad = ctx.createLinearGradient(bx, by, bx, by + bh);
+    grad.addColorStop(0, '#4CAF50');
+    grad.addColorStop(1, '#81C784');
+    ctx.fillStyle = grad;
+    roundRect(ctx, bx, by, bw, bh, w * 0.008);
+    ctx.fill();
+
+    ctx.fillStyle = '#888';
+    ctx.font = `${w * 0.024}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(m, bx + bw / 2, barAreaY + barAreaH + h * 0.02);
+
+    ctx.fillStyle = '#4CAF50';
+    ctx.font = `bold ${w * 0.022}px -apple-system, sans-serif`;
+    ctx.fillText(Math.round(values[i] * 100) + '%', bx + bw / 2, by - h * 0.01);
+  });
+
+  // Overall progress
+  const progY = chartY + chartH + h * 0.03;
+  const progH = h * 0.1;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.05)';
+  ctx.shadowBlur = w * 0.01;
+  ctx.fillStyle = '#FFFFFF';
+  roundRect(ctx, chartX, progY, chartW, progH, w * 0.025);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `600 ${w * 0.038}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('올해 달성률', chartX + w * 0.04, progY + progH * 0.4);
+
+  ctx.fillStyle = '#4CAF50';
+  ctx.font = `bold ${w * 0.06}px -apple-system, sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.fillText('30%', chartX + chartW - w * 0.04, progY + progH * 0.5);
+
+  const pX = chartX + w * 0.04;
+  const pY = progY + progH * 0.65;
+  const pW = chartW - w * 0.08;
+  const pH = h * 0.01;
+  ctx.fillStyle = '#E0E0E0';
+  roundRect(ctx, pX, pY, pW, pH, pH / 2);
+  ctx.fill();
+  ctx.fillStyle = '#4CAF50';
+  roundRect(ctx, pX, pY, pW * 0.3, pH, pH / 2);
+  ctx.fill();
+
+  drawBottomNav(ctx, x, y + h * 0.92, w, h * 0.08, 1);
+}
+
+function drawSettingsScreen(ctx, x, y, w, h) {
+  const barH = h * 0.07;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(x, y, w, barH);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `bold ${w * 0.055}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('설정', x + w * 0.06, y + barH * 0.65);
+
+  const menuItems = [
+    { icon: '📦', title: '데이터 백업', sub: 'JSON 파일로 내보내기' },
+    { icon: '📥', title: '데이터 복원', sub: '백업 파일에서 복원' },
+    { icon: '🔔', title: '알림 설정', sub: '매일 알림 받기' },
+    { icon: '🎨', title: '테마', sub: '시스템 설정 따름' },
+    { icon: '📄', title: '개인정보 처리방침', sub: '' },
+    { icon: '📧', title: '의견 보내기', sub: 'kmkam90@gmail.com' },
+    { icon: 'ℹ️', title: '앱 정보', sub: '버전 1.0.0' },
+  ];
+
+  let itemY = y + barH + h * 0.02;
+  const itemX = x + w * 0.05;
+  const itemW = w * 0.9;
+  const itemH = h * 0.065;
+
+  menuItems.forEach((item, i) => {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.03)';
+    ctx.shadowBlur = w * 0.008;
+    ctx.fillStyle = '#FFFFFF';
+    roundRect(ctx, itemX, itemY, itemW, itemH, w * 0.015);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.font = `${w * 0.045}px -apple-system, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(item.icon, itemX + w * 0.04, itemY + itemH * 0.6);
+
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = `500 ${w * 0.036}px -apple-system, sans-serif`;
+    ctx.fillText(item.title, itemX + w * 0.13, itemY + itemH * (item.sub ? 0.42 : 0.6));
+
+    if (item.sub) {
+      ctx.fillStyle = '#999';
+      ctx.font = `${w * 0.026}px -apple-system, sans-serif`;
+      ctx.fillText(item.sub, itemX + w * 0.13, itemY + itemH * 0.72);
+    }
+
+    // Arrow
+    ctx.fillStyle = '#CCC';
+    ctx.font = `${w * 0.035}px -apple-system, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText('›', itemX + itemW - w * 0.03, itemY + itemH * 0.6);
+
+    itemY += itemH + h * 0.008;
+  });
+
+  drawBottomNav(ctx, x, y + h * 0.92, w, h * 0.08, 2);
+}
+
+function drawBottomNav(ctx, x, y, w, h, active) {
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#E0E0E0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.stroke();
+
+  const tabs = ['버킷리스트', '리포트', '설정'];
+  const icons = ['☰', '📊', '⚙️'];
+  const tabW = w / 3;
+
+  tabs.forEach((tab, i) => {
+    const tx = x + i * tabW + tabW / 2;
+    ctx.fillStyle = i === active ? '#4CAF50' : '#999';
+    ctx.font = `${w * 0.04}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(icons[i], tx, y + h * 0.4);
+    ctx.font = `${w * 0.024}px -apple-system, sans-serif`;
+    ctx.fillText(tab, tx, y + h * 0.72);
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function renderScreenshot(index) {
+  const ss = screenshots[index];
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Background gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#E8F5E9');
+  bgGrad.addColorStop(1, '#FFFFFF');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Caption
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `bold ${W * 0.065}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  const lines = ss.caption.split('\n');
+  lines.forEach((line, i) => {
+    ctx.fillText(line, W / 2, H * 0.08 + i * W * 0.085);
+  });
+
+  // Subcaption
+  ctx.fillStyle = '#666';
+  ctx.font = `${W * 0.032}px -apple-system, sans-serif`;
+  ctx.fillText(ss.subcaption, W / 2, H * 0.08 + lines.length * W * 0.085 + W * 0.02);
+
+  // Phone frame
+  const phoneW = W * 0.78;
+  const phoneH = phoneW * 2.0;
+  const phoneX = (W - phoneW) / 2;
+  const phoneY = H * 0.22;
+
+  drawScreen(ctx, ss.screen, phoneX, phoneY, phoneW, phoneH);
+
+  return canvas;
+}
+
+function init() {
+  const container = document.getElementById('previews');
+  container.innerHTML = '';
+
+  screenshots.forEach((ss, i) => {
+    const fullCanvas = renderScreenshot(i);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'screenshot-wrapper';
+
+    const preview = document.createElement('canvas');
+    preview.className = 'preview-canvas';
+    preview.width = 180;
+    preview.height = Math.round(180 * H / W);
+    const pctx = preview.getContext('2d');
+    pctx.drawImage(fullCanvas, 0, 0, preview.width, preview.height);
+
+    preview.onclick = () => downloadOne(i);
+
+    const label = document.createElement('span');
+    label.textContent = `${i + 1}. ${ss.caption.replace('\n', ' ')}`;
+
+    wrapper.appendChild(preview);
+    wrapper.appendChild(label);
+    container.appendChild(wrapper);
+
+    // Store full canvas
+    const hidden = document.getElementById('hidden');
+    fullCanvas.id = `full-${i}`;
+    hidden.appendChild(fullCanvas);
+  });
+}
+
+function downloadOne(index) {
+  const canvas = document.getElementById(`full-${index}`);
+  const link = document.createElement('a');
+  link.download = `screenshot_${index + 1}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+function downloadAll() {
+  screenshots.forEach((_, i) => {
+    setTimeout(() => downloadOne(i), i * 500);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
