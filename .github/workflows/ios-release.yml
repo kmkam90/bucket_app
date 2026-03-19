@@ -61,7 +61,7 @@ jobs:
 
           # Apply provisioning profile with correct UUID filename
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/75393f2f-4839-4b9c-9989-e2420d08f37e.mobileprovision
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/2f8d0ce5-c1be-443f-b811-19118c059867.mobileprovision
 
           # Verify certificate is installed
           security find-identity -v -p codesigning $KEYCHAIN_PATH

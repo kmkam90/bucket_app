@@ -13,7 +13,7 @@
 	<key>provisioningProfiles</key>
 	<dict>
 		<key>com.kmkam.bucket</key>
-		<string>Bucket App ios_app_store 1773633130</string>
+		<string>Bucket App AppStore)</string>
 	</dict>
 	<key>uploadSymbols</key>
 	<true/>
