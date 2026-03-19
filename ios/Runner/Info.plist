@@ -41,6 +41,8 @@
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>백업 파일을 선택하기 위해 파일 접근 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>백업 파일을 저장하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
