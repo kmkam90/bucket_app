@@ -54,11 +54,17 @@ jobs:
           # Import certificate to keychain
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
 
-          # Apply provisioning profile
+          # Set as default keychain and add to search list
+          security default-keychain -s $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH login.keychain-db
+
+          # Apply provisioning profile with correct UUID filename
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/75393f2f-4839-4b9c-9989-e2420d08f37e.mobileprovision
+
+          # Verify certificate is installed
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
 
       - name: Build iOS archive
         run: |
@@ -74,7 +80,8 @@ jobs:
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
           # Decode API key
-          API_KEY_PATH=$RUNNER_TEMP/AuthKey.p8
+          mkdir -p ~/.private_keys
+          API_KEY_PATH=~/.private_keys/AuthKey_$APP_STORE_CONNECT_API_KEY_ID.p8
           echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode -o $API_KEY_PATH
 
           xcrun altool --upload-app \
@@ -86,4 +93,5 @@ jobs:
       - name: Clean up keychain
         if: ${{ always() }}
         run: |
+          security default-keychain -s login.keychain-db 2>/dev/null || true
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true

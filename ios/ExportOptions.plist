@@ -8,12 +8,12 @@
 	<string>upload</string>
 	<key>signingStyle</key>
 	<string>manual</string>
-	<key>provisionedDevices</key>
-	<array/>
+	<key>teamID</key>
+	<string>VDZ635S5CZ</string>
 	<key>provisioningProfiles</key>
 	<dict>
 		<key>com.kmkam.bucket</key>
-		<string>$(PROVISIONING_PROFILE_SPECIFIER)</string>
+		<string>Bucket App ios_app_store 1773633130</string>
 	</dict>
 	<key>uploadSymbols</key>
 	<true/>
