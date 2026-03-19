@@ -61,15 +61,9 @@ jobs:
 
       - name: Build iOS archive
         run: |
-          flutter build ios --release --build-number=${{ github.event.inputs.build_number }} --no-codesign
-          xcodebuild -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            archive \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM=VDZ635S5CZ \
-            PROVISIONING_PROFILE_SPECIFIER="Bucket App AppStore)"
+          flutter build ipa \
+            --release \
+            --build-number=${{ github.event.inputs.build_number }}
 
       - name: Export IPA
         run: |
